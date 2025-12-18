@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">{{ job.title }}</h2>
+                <h6 class="card-subtitle mb-2 text-muted">Posted by {{
+                    job.client.company_name|default:job.client.user.username }}</h6>
+                <p class="card-text">{{ job.description }}</p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Budget:</strong> ${{ job.budget }}</li>
+                    <li class="list-group-item"><strong>Deadline:</strong> {{ job.deadline }}</li>
+                    <li class="list-group-item"><strong>Category:</strong> {{ job.category }}</li>
+                </ul>
+            </div>
+        </div>
+
+        {% if user.is_freelancer %}
+        <div class="card">
+            <div class="card-header">Apply for this Job</div>
+            <div class="card-body">
+                {% if has_applied %}
+                <div class="alert alert-info">You have already applied for this job.</div>
+                {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">Submit Application</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% elif user.is_client and user.client_profile == job.client %}
+        <div class="card">
+            <div class="card-header">Applications</div>
+            <div class="card-body">
+                {% if job.applications.all %}
+                <ul class="list-group">
+                    {% for app in job.applications.all %}
+                    <li class="list-group-item">
+                        <strong>{{ app.freelancer.user.username }}</strong>: {{ app.proposal_text }}
+                        <br>
+                        <small>Expected: ${{ app.expected_payment }}</small>
+                        <span class="badge bg-secondary">{{ app.status }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No applications yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

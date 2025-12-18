@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2>Freelancer Dashboard</h2>
+        <a href="{% url 'job_list' %}" class="btn btn-primary mb-3">Find Jobs</a>
+
+        <h3>My Applications</h3>
+        {% if applications %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Applied On</th>
+                    <th>Status</th>
+                    <th>Expected Payment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td><a href="{% url 'job_detail' app.job.id %}">{{ app.job.title }}</a></td>
+                    <td>{{ app.created_at|date:"M d, Y" }}</td>
+                    <td>
+                        <span
+                            class="badge {% if app.status == 'Approved' %}bg-success{% elif app.status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                            {{ app.status }}
+                        </span>
+                    </td>
+                    <td>${{ app.expected_payment }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>You haven't applied to any jobs yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

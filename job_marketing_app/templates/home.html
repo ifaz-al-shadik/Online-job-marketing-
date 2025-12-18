@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="jumbotron text-center mt-4">
+    <h1 class="display-4">Welcome to Online Job Market</h1>
+    <p class="lead">Connect with top talent or find your dream job today.</p>
+    <hr class="my-4">
+    <p>Join our community of professionals.</p>
+    {% if not user.is_authenticated %}
+    <a class="btn btn-primary btn-lg" href="{% url 'register' %}" role="button">Get Started</a>
+    <a class="btn btn-secondary btn-lg" href="{% url 'login' %}" role="button">Login</a>
+    {% else %}
+    <p>You are logged in as {{ user.username }}.</p>
+    {% endif %}
+</div>
+{% endblock %}
