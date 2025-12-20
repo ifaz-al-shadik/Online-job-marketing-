@@ -88,3 +88,71 @@ def job_detail(request, job_id):
         form = ApplicationForm()
 
     return render(request, 'jobs/job_detail.html', {'job': job, 'form': form, 'has_applied': has_applied})
+@login_required
+def view_applications(request, job_id):
+    job = get_object_or_404(JobListing, id=job_id)
+    
+    # Security: Ensure only the owner of the job can see applications
+    if request.user.client_profile != job.client:
+        return redirect('home')
+        
+    applications = Application.objects.filter(job=job)
+    return render(request, 'dashboard/job_applications.html', {
+        'job': job, 
+        'applications': applications
+    })
+
+@login_required
+@login_required
+def update_application_status(request, application_id, new_status):
+    application = get_object_or_404(Application, id=application_id)
+    
+    # Security: Ensure the person clicking is the job owner
+    # Note: We use .client_profile because of your related_name
+    if request.user.client_profile != application.job.client:
+        return redirect('home')
+
+    # FIX: We accept 'Approved' and 'Rejected' (Title Case)
+    # We also print to the terminal so you can see if it works
+    print(f"DEBUG: Attempting to change status to {new_status}")
+    
+    if new_status in ['Approved', 'Rejected']:
+        application.status = new_status
+        application.save()
+        print("DEBUG: Saved successfully!")
+    else:
+        print("DEBUG: Failed! Status mismatch.")
+        
+    # Go back to the list
+    return redirect('view_applications', job_id=application.job.id)
+from .forms import ClientProfileForm, FreelancerProfileForm # Import the new forms
+
+@login_required
+def update_profile(request):
+    user = request.user
+    
+    # 1. Determine which role the user has
+    if user.is_client:
+        profile = user.client_profile
+        FormClass = ClientProfileForm
+    elif user.is_freelancer:
+        profile = user.freelancer_profile
+        FormClass = FreelancerProfileForm
+    else:
+        return redirect('home')
+
+    # 2. Handle the Save Action
+    if request.method == 'POST':
+        form = FormClass(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            # Redirect to the correct dashboard
+            if user.is_client:
+                return redirect('client_dashboard')
+            else:
+                return redirect('freelancer_dashboard')
+    else:
+        # 3. Pre-fill the form with existing data
+        form = FormClass(instance=profile)
+
+    return render(request, 'update_profile.html', {'form': form})

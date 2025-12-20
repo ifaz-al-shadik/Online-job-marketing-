@@ -24,10 +24,34 @@ class JobListingForm(forms.ModelForm):
         model = JobListing
         fields = ['title', 'description', 'budget', 'deadline', 'category']
         widgets = {
-            'deadline': forms.DateInput(attrs={'type': 'date'}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Python Developer Needed'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Describe the job details...'}),
+            'budget': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '$'}),
+            'deadline': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
         }
 
 class ApplicationForm(forms.ModelForm):
     class Meta:
         model = Application
         fields = ['proposal_text', 'expected_payment']
+from .models import Client, Freelancer, Skill # Ensure Skill is imported
+
+class ClientProfileForm(forms.ModelForm):
+    class Meta:
+        model = Client
+        fields = ['company_name', 'description']
+        widgets = {
+            'company_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Tech Solutions Ltd.'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Tell us about your company...'}),
+        }
+
+class FreelancerProfileForm(forms.ModelForm):
+    class Meta:
+        model = Freelancer
+        fields = ['experience_level', 'portfolio_url', 'skills']
+        widgets = {
+            'experience_level': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Senior Python Developer'}),
+            'portfolio_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://github.com/...'}),
+            'skills': forms.CheckboxSelectMultiple(), # This lets them pick multiple skills
+        }

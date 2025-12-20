@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="{% url 'client_dashboard' %}" class="btn btn-outline-secondary mb-3">&larr; Back to Dashboard</a>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4>Applicants for: {{ job.title }}</h4>
+        </div>
+        <div class="card-body">
+            {% if applications %}
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Freelancer</th>
+                        <th>Proposal</th>
+                        <th>Bid Amount</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td class="fw-bold">{{ app.freelancer.user.username }}</td>
+                        <td>{{ app.proposal_text }}</td>
+                        <td>${{ app.expected_payment }}</td>
+                        <td>
+                            {% if app.status == 'Approved' %}
+                                <span class="badge bg-success">Hired</span>
+                            {% elif app.status == 'Rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if app.status == 'Pending' %}
+                                <a href="{% url 'update_status' app.id 'Approved' %}" class="btn btn-success btn-sm">Hire</a>
+                                <a href="{% url 'update_status' app.id 'Rejected' %}" class="btn btn-danger btn-sm">Reject</a>
+                            {% else %}
+                                <span class="text-muted small">Decided</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <div class="alert alert-info">No one has applied to this job yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

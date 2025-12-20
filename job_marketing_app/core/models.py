@@ -1,13 +1,17 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+# 1. We put Category at the top so other models can use it
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
 class User(AbstractUser):
     is_client = models.BooleanField(default=False)
     is_freelancer = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
-    
-    # Additional fields from EER if needed, e.g., phone, address
-    # For now, using default fields + roles
 
     def __str__(self):
         return self.username
@@ -26,9 +30,9 @@ class Skill(models.Model):
 
 class Verification(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='verification')
-    document_url = models.URLField(max_length=500, blank=True, null=True) # Or FileField
+    document_url = models.URLField(max_length=500, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
-    
+
     def __str__(self):
         return f"Verification for {self.user.username}"
 
@@ -44,7 +48,7 @@ class Freelancer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='freelancer_profile')
     skills = models.ManyToManyField(Skill, blank=True)
     portfolio_url = models.URLField(blank=True)
-    experience_level = models.CharField(max_length=50, blank=True) # e.g., Junior, Senior
+    experience_level = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
         return self.user.username
@@ -55,7 +59,10 @@ class JobListing(models.Model):
     description = models.TextField()
     budget = models.DecimalField(max_digits=10, decimal_places=2)
     deadline = models.DateField()
-    category = models.CharField(max_length=100)
+    
+    # 2. THIS IS THE FIX: Link to the Category model
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='jobs')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 

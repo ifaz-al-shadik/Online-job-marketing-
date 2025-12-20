@@ -57,10 +57,11 @@ ROOT_URLCONF = 'job_market.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'templates'],  # <--- This is the key line you need!
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -80,7 +81,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'job_market_db',      # <--- The name you created in Step 1
         'USER': 'root',               # Your MySQL username
-        'PASSWORD': 'your_password',  # Your MySQL password
+        'PASSWORD': '',  # Your MySQL password
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -133,3 +134,7 @@ AUTH_USER_MODEL = 'core.User'
 
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+# --- Auth Settings ---
+LOGIN_URL = 'login'              # When login is required, go here
+LOGIN_REDIRECT_URL = 'dashboard' # After login, go here
+LOGOUT_REDIRECT_URL = 'login'    # After logout, go here (or change to 'home')

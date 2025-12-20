@@ -3,13 +3,17 @@
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <h2>Freelancer Dashboard</h2>
-        <a href="{% url 'job_list' %}" class="btn btn-primary mb-3">Find Jobs</a>
+        <h2 class="mb-4">Freelancer Dashboard</h2>
+        
+        <div class="mb-4">
+            <a href="{% url 'job_list' %}" class="btn btn-primary">Find Jobs</a>
+            <a href="{% url 'update_profile' %}" class="btn btn-outline-dark ms-2">Edit Profile</a>
+        </div>
 
         <h3>My Applications</h3>
         {% if applications %}
-        <table class="table table-striped">
-            <thead>
+        <table class="table table-striped table-hover mt-3 shadow-sm">
+            <thead class="table-dark">
                 <tr>
                     <th>Job Title</th>
                     <th>Applied On</th>
@@ -20,11 +24,10 @@
             <tbody>
                 {% for app in applications %}
                 <tr>
-                    <td><a href="{% url 'job_detail' app.job.id %}">{{ app.job.title }}</a></td>
+                    <td><a href="{% url 'job_detail' app.job.id %}" class="text-decoration-none fw-bold">{{ app.job.title }}</a></td>
                     <td>{{ app.created_at|date:"M d, Y" }}</td>
                     <td>
-                        <span
-                            class="badge {% if app.status == 'Approved' %}bg-success{% elif app.status == 'Rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                        <span class="badge {% if app.status == 'Approved' %}bg-success{% elif app.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
                             {{ app.status }}
                         </span>
                     </td>
@@ -34,7 +37,9 @@
             </tbody>
         </table>
         {% else %}
-        <p>You haven't applied to any jobs yet.</p>
+        <div class="alert alert-info mt-3">
+            You haven't applied to any jobs yet. <a href="{% url 'job_list' %}">Start looking now!</a>
+        </div>
         {% endif %}
     </div>
 </div>
