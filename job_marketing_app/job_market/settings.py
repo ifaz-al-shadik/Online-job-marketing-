@@ -77,8 +77,12 @@ WSGI_APPLICATION = 'job_market.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'job_market_db',      # <--- The name you created in Step 1
+        'USER': 'root',               # Your MySQL username
+        'PASSWORD': 'your_password',  # Your MySQL password
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
 
