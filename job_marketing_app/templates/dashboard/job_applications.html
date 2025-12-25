@@ -10,43 +10,54 @@
         </div>
         <div class="card-body">
             {% if applications %}
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Freelancer</th>
-                        <th>Proposal</th>
-                        <th>Bid Amount</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for app in applications %}
-                    <tr>
-                        <td class="fw-bold">{{ app.freelancer.user.username }}</td>
-                        <td>{{ app.proposal_text }}</td>
-                        <td>${{ app.expected_payment }}</td>
-                        <td>
-                            {% if app.status == 'Approved' %}
-                                <span class="badge bg-success">Hired</span>
-                            {% elif app.status == 'Rejected' %}
-                                <span class="badge bg-danger">Rejected</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Pending</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if app.status == 'Pending' %}
-                                <a href="{% url 'update_status' app.id 'Approved' %}" class="btn btn-success btn-sm">Hire</a>
-                                <a href="{% url 'update_status' app.id 'Rejected' %}" class="btn btn-danger btn-sm">Reject</a>
-                            {% else %}
-                                <span class="text-muted small">Decided</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Freelancer</th>
+                            <th>Proposal</th>
+                            <th>Bid Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in applications %}
+                        <tr>
+                            <td class="fw-bold">{{ app.freelancer_name }}</td>
+                            
+                            <td>{{ app.proposal_text|truncatewords:10 }}</td>
+                            <td>${{ app.expected_payment }}</td>
+                            
+                            <td>
+                                {% if app.status == 'Approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif app.status == 'Rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if app.status == 'Pending' %}
+                                    <a href="{% url 'update_application_status' app.id 'Approved' %}" class="btn btn-success btn-sm">Hire</a>
+                                    <a href="{% url 'update_application_status' app.id 'Rejected' %}" class="btn btn-outline-danger btn-sm">Reject</a>
+                                
+                                {% elif app.status == 'Approved' %}
+                                    <a href="{% url 'schedule_interview' app.id %}" class="btn btn-warning btn-sm">
+                                        <i class="bi bi-calendar-event"></i> Schedule Interview
+                                    </a>
+                                
+                                {% else %}
+                                    <span class="text-muted small">Decided</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
                 <div class="alert alert-info">No one has applied to this job yet.</div>
             {% endif %}

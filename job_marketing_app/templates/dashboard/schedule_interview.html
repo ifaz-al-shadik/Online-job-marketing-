@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header {% if is_reschedule %}bg-warning{% else %}bg-primary{% endif %} text-white">
+                    <h4>
+                        {% if is_reschedule %}
+                            📅 Reschedule Interview
+                        {% else %}
+                            📅 Schedule Interview
+                        {% endif %}
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <p class="mb-4">
+                        Candidate: <strong>{{ application.freelancer.user.username }}</strong><br>
+                        Job: <strong>{{ application.job.title }}</strong>
+                    </p>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Date & Time</label>
+                            {{ form.date_time }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Meeting Platform</label>
+                            {{ form.platform }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Meeting Link</label>
+                            {{ form.meeting_link }}
+                            <div class="form-text text-danger">{{ form.meeting_link.errors }}</div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn {% if is_reschedule %}btn-warning{% else %}btn-success{% endif %} btn-lg">
+                                {% if is_reschedule %}Update Interview{% else %}Confirm Interview{% endif %}
+                            </button>
+                            
+                            <a href="{% url 'client_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

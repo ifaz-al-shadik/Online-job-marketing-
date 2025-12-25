@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import User, JobListing, Application
+from .models import Interview # <--- Make sure to import Interview at the top
 
 class CustomUserCreationForm(UserCreationForm):
     is_client = forms.BooleanField(required=False, label="I want to hire (Client)")
@@ -55,3 +56,51 @@ class FreelancerProfileForm(forms.ModelForm):
             'portfolio_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://github.com/...'}),
             'skills': forms.CheckboxSelectMultiple(), # This lets them pick multiple skills
         }
+# In core/forms.py
+
+class InterviewForm(forms.ModelForm):
+    # 1. Add a dropdown for the user to pick the platform
+    PLATFORM_CHOICES = [
+        ('Google Meet', 'Google Meet'),
+        ('Zoom', 'Zoom'),
+    ]
+    platform = forms.ChoiceField(
+        choices=PLATFORM_CHOICES, 
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    # 2. A strict URL field to ensure they paste a real link
+    meeting_link = forms.URLField(
+        widget=forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Paste the full meeting link here...'})
+    )
+
+    class Meta:
+        model = Interview
+        # We only show Date, Platform, and Link. 
+        # We will save 'platform' + 'meeting_link' into 'link_or_location' automatically.
+        fields = ['date_time', 'platform', 'meeting_link']
+        widgets = {
+            'date_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        platform = cleaned_data.get('platform')
+        link = cleaned_data.get('meeting_link')
+
+        # 3. Validation: Ensure the link matches the platform
+        if platform == 'Google Meet' and 'google.com' not in link:
+            self.add_error('meeting_link', 'Please enter a valid Google Meet link (must contain google.com).')
+        
+        if platform == 'Zoom' and 'zoom.us' not in link:
+            self.add_error('meeting_link', 'Please enter a valid Zoom link (must contain zoom.us).')
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        # 4. Save Logic: Take the link and put it into the model's 'link_or_location' field
+        instance = super().save(commit=False)
+        instance.link_or_location = self.cleaned_data['meeting_link']
+        if commit:
+            instance.save()
+        return instance      
