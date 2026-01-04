@@ -136,7 +136,7 @@ def freelancer_dashboard(request):
         """, [freelancer_id])
         interviews = dictfetchall(cursor)
 
-    # 3. RAW SQL: Get Applications (UPDATED to fetch Company Name)
+    # 3. RAW SQL: Get Applications
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -192,7 +192,6 @@ def job_list(request):
         cursor.execute("SELECT * FROM core_category")
         categories = dictfetchall(cursor)
 
-    # UPDATED SQL: Fetch company_name and alias username as client_username
     sql_query = """
         SELECT 
             j.*, 
@@ -223,7 +222,6 @@ def job_list(request):
 
 @login_required
 def job_detail(request, job_id):
-    # 1. RAW SQL: Fetch Job + Company Info (Fixing the Error)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -237,14 +235,13 @@ def job_detail(request, job_id):
             WHERE j.id = %s
         """, [job_id])
         rows = dictfetchall(cursor)
-
+        
     if not rows:
         return redirect('job_list')
     
-    job = rows[0] # The job is now a flat dictionary
+    job = rows[0]
 
     has_applied = False
-    
     if request.user.is_freelancer:
         fid = request.user.freelancer_profile.id
         with connection.cursor() as cursor:
@@ -429,3 +426,30 @@ def update_profile(request):
         form = FormClass(instance=profile)
 
     return render(request, 'update_profile.html', {'form': form})
+
+# --- NEW VIEW FOR FREELANCER PUBLIC PROFILE ---
+@login_required
+def freelancer_public_profile(request, freelancer_id):
+    if not request.user.is_client:
+        return redirect('home')
+
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                f.id, 
+                f.skills, 
+                f.portfolio_link,
+                u.username, 
+                u.email,
+                u.date_joined
+            FROM core_freelancer f
+            JOIN core_user u ON f.user_id = u.id
+            WHERE f.id = %s
+        """, [freelancer_id])
+        rows = dictfetchall(cursor)
+
+    if not rows:
+        return redirect('dashboard')
+    
+    profile = rows[0]
+    return render(request, 'dashboard/freelancer_public_profile.html', {'profile': profile})

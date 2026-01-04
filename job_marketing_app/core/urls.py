@@ -25,6 +25,9 @@ urlpatterns = [
     # Application Management
     path('job/<int:job_id>/applications/', views.view_applications, name='view_applications'),
     path('application/<int:application_id>/update/<str:new_status>/', views.update_application_status, name='update_application_status'),
+    
+    # NEW: Freelancer Public Profile
+    path('freelancer/<int:freelancer_id>/', views.freelancer_public_profile, name='freelancer_public_profile'),
 
     # Interviews
     path('application/<int:application_id>/schedule/', views.schedule_interview, name='schedule_interview'),

@@ -24,7 +24,11 @@
                     <tbody>
                         {% for app in applications %}
                         <tr>
-                            <td class="fw-bold">{{ app.freelancer_name }}</td>
+                            <td class="fw-bold">
+                                <a href="{% url 'freelancer_public_profile' app.freelancer_id %}" class="text-decoration-none text-primary">
+                                    {{ app.freelancer_name }} ↗
+                                </a>
+                            </td>
                             
                             <td>{{ app.proposal_text|truncatewords:10 }}</td>
                             <td>${{ app.expected_payment }}</td>

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white text-center py-4">
+                    <span style="font-size: 4rem;">👨‍💻</span>
+                    <h2 class="mb-0">{{ profile.username }}</h2>
+                    <p class="mb-0 text-white-50">Freelancer</p>
+                </div>
+                
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <h5 class="text-muted text-uppercase small fw-bold">Contact</h5>
+                        <p class="fs-5">📧 <a href="mailto:{{ profile.email }}">{{ profile.email }}</a></p>
+                        <p class="text-muted small">Joined: {{ profile.date_joined|date:"M Y" }}</p>
+                    </div>
+                    
+                    <hr>
+
+                    <div class="mb-4">
+                        <h5 class="text-muted text-uppercase small fw-bold">Skills & Expertise</h5>
+                        <p class="fs-5" style="white-space: pre-line;">
+                            {{ profile.skills|default:"No specific skills listed." }}
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-4">
+                        <h5 class="text-muted text-uppercase small fw-bold">Portfolio</h5>
+                        {% if profile.portfolio_link %}
+                            <a href="{{ profile.portfolio_link }}" target="_blank" class="btn btn-outline-primary btn-lg">
+                                🔗 View Portfolio Project
+                            </a>
+                        {% else %}
+                            <p class="text-muted">No portfolio link provided.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid mt-5">
+                        <a href="javascript:history.back()" class="btn btn-secondary">
+                            &larr; Back to Applications
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
