@@ -2,10 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db import connection
-from django.utils import timezone  # Required for manual timestamps in Raw SQL
+from django.utils import timezone
 
-# Models are imported mainly for get_object_or_404 shortcuts in some places, 
-# but we primarily use SQL now.
 from .models import Client, Freelancer, JobListing, Application, Interview
 from .forms import (
     CustomUserCreationForm, 
@@ -34,17 +32,13 @@ def register(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            # 1. Create User (We use ORM here for secure Password Hashing)
             user = form.save()
-            
-            # 2. RAW SQL: Create the specific Profile (Client or Freelancer)
-            # We manually INSERT into the profile table linking to the new user_id
+            # RAW SQL: Create Profile
             with connection.cursor() as cursor:
                 if user.is_client:
                     cursor.execute("INSERT INTO core_client (user_id) VALUES (%s)", [user.id])
                 if user.is_freelancer:
                     cursor.execute("INSERT INTO core_freelancer (user_id) VALUES (%s)", [user.id])
-            
             login(request, user)
             return redirect('dashboard')
     else:
@@ -68,14 +62,17 @@ def client_dashboard(request):
     
     client_id = request.user.client_profile.id
     
-    # 1. RAW SQL: Get Interviews (Complex JOIN)
-    # Connects: Interview -> Application -> Freelancer -> User -> Job
+    # 1. RAW SQL: Get Client Profile Data
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT company_name, location FROM core_client WHERE id = %s", [client_id])
+        rows = dictfetchall(cursor)
+        profile_data = rows[0] if rows else {}
+
+    # 2. RAW SQL: Get Interviews
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
-                i.id, 
-                i.date_time, 
-                i.link_or_location,
+                i.id, i.date_time, i.link_or_location,
                 u.username AS freelancer_name,
                 u.email AS freelancer_email,
                 j.title AS job_title
@@ -89,18 +86,23 @@ def client_dashboard(request):
         """, [client_id])
         interviews = dictfetchall(cursor)
 
-    # 2. RAW SQL: Get Jobs
+    # 3. RAW SQL: Get Jobs WITH Pending Count
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT * FROM core_joblisting 
-            WHERE client_id = %s 
-            ORDER BY created_at DESC
+            SELECT 
+                j.*,
+                (SELECT COUNT(*) FROM core_application a 
+                 WHERE a.job_id = j.id AND a.status = 'Pending') AS pending_count
+            FROM core_joblisting j
+            WHERE j.client_id = %s 
+            ORDER BY j.created_at DESC
         """, [client_id])
         jobs = dictfetchall(cursor)
 
     return render(request, 'dashboard/client_dashboard.html', {
         'jobs': jobs, 
-        'interviews': interviews
+        'interviews': interviews,
+        'profile': profile_data
     })
 
 @login_required
@@ -110,14 +112,17 @@ def freelancer_dashboard(request):
     
     freelancer_id = request.user.freelancer_profile.id
     
-    # 1. RAW SQL: Get Interviews
-    # Connects: Interview -> Application -> Job -> Client -> User
+    # 1. RAW SQL: Get Freelancer Profile Data
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT skills, portfolio_link FROM core_freelancer WHERE id = %s", [freelancer_id])
+        rows = dictfetchall(cursor)
+        profile_data = rows[0] if rows else {}
+
+    # 2. RAW SQL: Get Interviews
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
-                i.id, 
-                i.date_time, 
-                i.link_or_location,
+                i.id, i.date_time, i.link_or_location,
                 j.title AS job_title,
                 c.company_name,
                 u.username AS client_username
@@ -131,15 +136,19 @@ def freelancer_dashboard(request):
         """, [freelancer_id])
         interviews = dictfetchall(cursor)
 
-    # 2. RAW SQL: Get Applications
+    # 3. RAW SQL: Get Applications (UPDATED to fetch Company Name)
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
                 a.*, 
                 j.title AS job_title,
-                j.id AS job_id
+                j.id AS job_id,
+                c.company_name,
+                u.username AS client_username
             FROM core_application a
             JOIN core_joblisting j ON a.job_id = j.id
+            JOIN core_client c ON j.client_id = c.id
+            JOIN core_user u ON c.user_id = u.id
             WHERE a.freelancer_id = %s
             ORDER BY a.created_at DESC
         """, [freelancer_id])
@@ -147,7 +156,8 @@ def freelancer_dashboard(request):
 
     return render(request, 'dashboard/freelancer_dashboard.html', {
         'applications': applications,
-        'interviews': interviews
+        'interviews': interviews,
+        'profile': profile_data
     })
 
 @login_required
@@ -158,11 +168,9 @@ def post_job(request):
     if request.method == 'POST':
         form = JobListingForm(request.POST)
         if form.is_valid():
-            # Extract data
             d = form.cleaned_data
             client_id = request.user.client_profile.id
             
-            # RAW SQL: Insert Job
             with connection.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO core_joblisting 
@@ -180,17 +188,16 @@ def post_job(request):
 def job_list(request):
     category_id = request.GET.get('category')
 
-    # 1. RAW SQL: Fetch Categories
     with connection.cursor() as cursor:
         cursor.execute("SELECT * FROM core_category")
         categories = dictfetchall(cursor)
 
-    # 2. RAW SQL: Build Job Query with JOINs
+    # UPDATED SQL: Fetch company_name and alias username as client_username
     sql_query = """
         SELECT 
             j.*, 
             c.company_name, 
-            u.username 
+            u.username AS client_username 
         FROM core_joblisting j
         LEFT JOIN core_client c ON j.client_id = c.id
         LEFT JOIN core_user u ON c.user_id = u.id
@@ -216,11 +223,28 @@ def job_list(request):
 
 @login_required
 def job_detail(request, job_id):
-    # Retrieve job (we use ORM shortcut for safety/simplicity here, but you could use SQL select)
-    job = get_object_or_404(JobListing, id=job_id)
+    # 1. RAW SQL: Fetch Job + Company Info (Fixing the Error)
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                j.*, 
+                c.company_name, 
+                c.location,
+                u.username AS client_username
+            FROM core_joblisting j
+            LEFT JOIN core_client c ON j.client_id = c.id
+            LEFT JOIN core_user u ON c.user_id = u.id
+            WHERE j.id = %s
+        """, [job_id])
+        rows = dictfetchall(cursor)
+
+    if not rows:
+        return redirect('job_list')
+    
+    job = rows[0] # The job is now a flat dictionary
+
     has_applied = False
     
-    # RAW SQL: Check if user already applied
     if request.user.is_freelancer:
         fid = request.user.freelancer_profile.id
         with connection.cursor() as cursor:
@@ -232,13 +256,12 @@ def job_detail(request, job_id):
     
     if request.method == 'POST' and request.user.is_freelancer:
         if has_applied:
-            return redirect('job_detail', job_id=job.id)
+            return redirect('job_detail', job_id=job['id'])
             
         form = ApplicationForm(request.POST)
         if form.is_valid():
             d = form.cleaned_data
             
-            # RAW SQL: Insert Application
             with connection.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO core_application 
@@ -261,8 +284,6 @@ def view_applications(request, job_id):
     if request.user.client_profile != job.client:
         return redirect('home')
         
-    # RAW SQL: Fetch Applications + Freelancer Names
-    # We join Freelancer -> User to get the name
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -282,8 +303,6 @@ def view_applications(request, job_id):
 
 @login_required
 def update_application_status(request, application_id, new_status):
-    # 1. Fetch Application ID and Job Owner ID to verify permission
-    # We do this via SQL to be strict
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT a.job_id, j.client_id 
@@ -298,11 +317,9 @@ def update_application_status(request, application_id, new_status):
         
     job_id, job_client_id = result
     
-    # Security: Ensure current user is the owner
     if request.user.client_profile.id != job_client_id:
         return redirect('home')
 
-    # 2. RAW SQL: Update Status
     if new_status in ['Approved', 'Rejected']:
         with connection.cursor() as cursor:
             cursor.execute("""
@@ -328,10 +345,6 @@ def schedule_interview(request, application_id):
         if form.is_valid():
             d = form.cleaned_data
             
-            # RAW SQL: Insert Interview
-            # Note: We use d['meeting_link'] because your cleaned_data Logic (in forms.py) 
-            # might have combined platform+url, or we just grab the link field directly.
-            # Assuming your form puts the final URL in 'meeting_link'.
             with connection.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO core_interview (date_time, link_or_location, application_id)
@@ -359,7 +372,6 @@ def reschedule_interview(request, interview_id):
         if form.is_valid():
             d = form.cleaned_data
             
-            # RAW SQL: Update Interview
             with connection.cursor() as cursor:
                 cursor.execute("""
                     UPDATE core_interview 
@@ -381,7 +393,6 @@ def reschedule_interview(request, interview_id):
 def update_profile(request):
     user = request.user
     
-    # Determine role and table
     if user.is_client:
         profile = user.client_profile
         FormClass = ClientProfileForm
@@ -396,19 +407,14 @@ def update_profile(request):
         if form.is_valid():
             d = form.cleaned_data
             
-            # RAW SQL: Update Profile
-            # We assume standard fields. If your model has different fields, update these columns!
             with connection.cursor() as cursor:
                 if user.is_client:
-                    # Example columns: company_name, location
-                    # Using .get() returns None if the form doesn't have that field
                     cursor.execute("""
                         UPDATE core_client 
                         SET company_name = %s, location = %s 
                         WHERE id = %s
                     """, [d.get('company_name'), d.get('location'), profile.id])
                 else:
-                    # Example columns: skills, portfolio_link
                     cursor.execute("""
                         UPDATE core_freelancer 
                         SET skills = %s, portfolio_link = %s 

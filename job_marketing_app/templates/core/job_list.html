@@ -1,49 +1,55 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h2>Available Jobs</h2>
+<div class="row mb-4">
+    <div class="col-md-8 offset-md-2 text-center">
+        <h1>🔍 Browse Jobs</h1>
+        <p class="text-muted">Find your next project.</p>
+    </div>
+</div>
 
-        <div class="card mb-4 p-3 bg-light">
-            <form method="GET" action="{% url 'job_list' %}" class="row g-2 align-items-center">
-                <div class="col-auto">
-                    <label class="col-form-label fw-bold">Filter by Category:</label>
-                </div>
-                <div class="col-auto flex-grow-1">
-                    <select name="category" class="form-select">
-                        <option value="">-- All Categories --</option>
-                        {% for cat in categories %}
-                            <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
-                                {{ cat.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">Search</button>
-                </div>
-            </form>
-        </div>
+<div class="row mb-4">
+    <div class="col-md-6 offset-md-3">
+        <form method="GET" class="d-flex gap-2">
+            <select name="category" class="form-select">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                    {{ cat.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
         {% if jobs %}
-        <div class="list-group">
-            {% for job in jobs %}
-            <a href="{% url 'job_detail' job.id %}" class="list-group-item list-group-item-action">
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">{{ job.title }}</h5>
-                    <small>Budget: ${{ job.budget }}</small>
+            <div class="list-group">
+                {% for job in jobs %}
+                <div class="list-group-item list-group-item-action flex-column align-items-start p-4 mb-3 shadow-sm border rounded">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h4 class="mb-1 text-primary">{{ job.title }}</h4>
+                        <span class="badge bg-success fs-6">${{ job.budget }}</span>
+                    </div>
+                    
+                    <p class="mb-1 text-muted">
+                        Posted by <strong>{{ job.company_name|default:job.client_username }}</strong> 
+                        &bull; {{ job.created_at|date:"M d, Y" }}
+                    </p>
+                    
+                    <p class="mb-3">{{ job.description|truncatewords:30 }}</p>
+                    
+                    <a href="{% url 'job_detail' job.id %}" class="btn btn-outline-primary btn-sm">View Details & Apply</a>
                 </div>
-                <p class="mb-1">{{ job.description|truncatewords:30 }}</p>
-                
-                <small class="text-muted">
-                    Posted by {{ job.company_name|default:job.username }} 
-                    on {{ job.created_at|date:"M d, Y" }}
-                </small>
-            </a>
-            {% endfor %}
-        </div>
+                {% endfor %}
+            </div>
         {% else %}
-        <p>No jobs available at the moment.</p>
+            <div class="alert alert-info text-center">
+                No jobs found. Try selecting a different category or come back later!
+            </div>
         {% endif %}
     </div>
 </div>

@@ -1,14 +1,12 @@
 from django.contrib import admin
-from .models import User, Client, Freelancer, JobListing, Application, Skill, Verification, Category, Interview
+from django.contrib.auth.admin import UserAdmin
+from .models import User, Client, Freelancer, JobListing, Application, Category, Interview
 
-admin.site.register(User)
+# Register your models here
+admin.site.register(User, UserAdmin)
 admin.site.register(Client)
 admin.site.register(Freelancer)
-admin.site.register(Skill)
-admin.site.register(Verification)
+admin.site.register(Category)
 admin.site.register(JobListing)
 admin.site.register(Application)
 admin.site.register(Interview)
-
-# IMPORTANT: This line makes the Category table visible!
-admin.site.register(Category)

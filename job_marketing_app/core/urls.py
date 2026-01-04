@@ -3,7 +3,7 @@ from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
-    # Homepage (Redirects to dashboard if logged in)
+    # Homepage
     path('', views.dashboard, name='home'),
 
     # Auth
@@ -24,11 +24,9 @@ urlpatterns = [
 
     # Application Management
     path('job/<int:job_id>/applications/', views.view_applications, name='view_applications'),
-    
-    # FIX: Renamed 'update_status' to 'update_application_status' to match your template
     path('application/<int:application_id>/update/<str:new_status>/', views.update_application_status, name='update_application_status'),
 
-    # NEW: The Schedule Interview Page
+    # Interviews
     path('application/<int:application_id>/schedule/', views.schedule_interview, name='schedule_interview'),
     path('interview/<int:interview_id>/reschedule/', views.reschedule_interview, name='reschedule_interview'),
 ]
