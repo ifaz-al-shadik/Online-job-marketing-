@@ -47,12 +47,14 @@ def register(request):
 
 @login_required
 def dashboard(request):
-    if request.user.is_client:
+    # REDIRECT LOGIC UPDATED FOR ADMIN
+    if request.user.is_superuser:
+        return redirect('admin_dashboard')
+    elif request.user.is_client:
         return redirect('client_dashboard')
     elif request.user.is_freelancer:
         return redirect('freelancer_dashboard')
-    elif request.user.is_admin:
-        return redirect('/admin/')
+    
     return redirect('home')
 
 @login_required
@@ -222,7 +224,6 @@ def job_list(request):
 
 @login_required
 def job_detail(request, job_id):
-    # 1. RAW SQL: Fetch Job + Company Info
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -338,10 +339,10 @@ def schedule_interview(request, application_id):
     if request.user.client_profile != application.job.client:
         return redirect('home')
 
-    # 1. Check if interview already exists (to prevent Duplicates/Crashes)
+    # Check for existing interview
     with connection.cursor() as cursor:
         cursor.execute("SELECT id, date_time, link_or_location FROM core_interview WHERE application_id = %s", [application_id])
-        existing_interview = cursor.fetchone() # returns tuple (id, date, link) or None
+        existing_interview = cursor.fetchone()
 
     if request.method == 'POST':
         form = InterviewForm(request.POST)
@@ -350,14 +351,14 @@ def schedule_interview(request, application_id):
             
             with connection.cursor() as cursor:
                 if existing_interview:
-                    # UPDATE existing interview (Fixes IntegrityError)
+                    # UPDATE existing
                     cursor.execute("""
                         UPDATE core_interview 
                         SET date_time = %s, link_or_location = %s 
                         WHERE application_id = %s
                     """, [d['date_time'], d['meeting_link'], application_id])
                 else:
-                    # INSERT new interview
+                    # INSERT new
                     cursor.execute("""
                         INSERT INTO core_interview (date_time, link_or_location, application_id)
                         VALUES (%s, %s, %s)
@@ -365,7 +366,6 @@ def schedule_interview(request, application_id):
                 
             return redirect('view_applications', job_id=application.job.id)
     else:
-        # Pre-fill form if rescheduling
         if existing_interview:
             initial_data = {'date_time': existing_interview[1], 'meeting_link': existing_interview[2]}
             form = InterviewForm(initial=initial_data)
@@ -472,3 +472,80 @@ def freelancer_public_profile(request, freelancer_id):
     
     profile = rows[0]
     return render(request, 'dashboard/freelancer_public_profile.html', {'profile': profile})
+
+
+# --- NEW CUSTOM ADMIN VIEWS (Raw SQL) ---
+
+@login_required
+def admin_dashboard(request):
+    if not request.user.is_superuser:
+        return redirect('home')
+
+    # 1. Fetch Stats
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM core_client")
+        client_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM core_freelancer")
+        freelancer_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM core_joblisting")
+        job_count = cursor.fetchone()[0]
+
+    # 2. Fetch Categories
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM core_category")
+        categories = dictfetchall(cursor)
+
+    # 3. Fetch All Users (Recent 50)
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, username, email, is_client, is_freelancer, date_joined, is_superuser
+            FROM core_user 
+            ORDER BY date_joined DESC 
+            LIMIT 50
+        """)
+        users = dictfetchall(cursor)
+
+    return render(request, 'dashboard/admin_dashboard.html', {
+        'stats': {
+            'clients': client_count,
+            'freelancers': freelancer_count,
+            'jobs': job_count
+        },
+        'categories': categories,
+        'users': users
+    })
+
+@login_required
+def admin_add_category(request):
+    if not request.user.is_superuser:
+        return redirect('home')
+        
+    if request.method == 'POST':
+        name = request.POST.get('category_name')
+        if name:
+            with connection.cursor() as cursor:
+                cursor.execute("INSERT INTO core_category (name) VALUES (%s)", [name])
+    
+    return redirect('admin_dashboard')
+
+@login_required
+def admin_delete_category(request, category_id):
+    if not request.user.is_superuser:
+        return redirect('home')
+        
+    with connection.cursor() as cursor:
+        cursor.execute("DELETE FROM core_category WHERE id = %s", [category_id])
+    
+    return redirect('admin_dashboard')
+
+@login_required
+def admin_delete_user(request, user_id):
+    if not request.user.is_superuser:
+        return redirect('home')
+        
+    with connection.cursor() as cursor:
+        cursor.execute("DELETE FROM core_user WHERE id = %s", [user_id])
+    
+    return redirect('admin_dashboard')

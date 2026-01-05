@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">⚡ Admin Dashboard <span class="fs-4 text-muted">(Raw SQL)</span></h1>
+        <span class="badge bg-danger">Superuser Access</span>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Clients</h5>
+                    <p class="card-text display-4 fw-bold">{{ stats.clients }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Freelancers</h5>
+                    <p class="card-text display-4 fw-bold">{{ stats.freelancers }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-warning text-dark mb-3 shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Active Jobs</h5>
+                    <p class="card-text display-4 fw-bold">{{ stats.jobs }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span>📂 Categories</span>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'admin_add_category' %}" method="POST" class="d-flex gap-2 mb-3">
+                        {% csrf_token %}
+                        <input type="text" name="category_name" class="form-control" placeholder="New Category Name..." required>
+                        <button type="submit" class="btn btn-success fw-bold">+</button>
+                    </form>
+                    
+                    <hr>
+
+                    <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                        {% for cat in categories %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ cat.name }}
+                            <a href="{% url 'admin_delete_category' cat.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('⚠️ Delete category: {{ cat.name }}?')">
+                                🗑️
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-dark text-white">
+                    <span>👥 Recent Users</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">User Info</th>
+                                    <th>Role</th>
+                                    <th>Joined</th>
+                                    <th class="text-end pe-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <strong>{{ user.username }}</strong><br>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </td>
+                                    <td>
+                                        {% if user.is_superuser %}
+                                            <span class="badge bg-danger">ADMIN</span>
+                                        {% elif user.is_client %}
+                                            <span class="badge bg-primary">Client</span>
+                                        {% elif user.is_freelancer %}
+                                            <span class="badge bg-success">Freelancer</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Guest</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                                    <td class="text-end pe-3">
+                                        {% if not user.is_superuser %}
+                                        <a href="{% url 'admin_delete_user' user.id %}" class="btn btn-danger btn-sm" onclick="return confirm('⚠️ DANGER: Are you sure you want to delete {{ user.username }}? This will permanently remove their profile and jobs.')">
+                                            Delete
+                                        </a>
+                                        {% else %}
+                                            <span class="text-muted small">Protected</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -26,10 +26,16 @@ urlpatterns = [
     path('job/<int:job_id>/applications/', views.view_applications, name='view_applications'),
     path('application/<int:application_id>/update/<str:new_status>/', views.update_application_status, name='update_application_status'),
     
-    # NEW: Freelancer Public Profile
+    # Freelancer Public Profile
     path('freelancer/<int:freelancer_id>/', views.freelancer_public_profile, name='freelancer_public_profile'),
 
     # Interviews
     path('application/<int:application_id>/schedule/', views.schedule_interview, name='schedule_interview'),
     path('interview/<int:interview_id>/reschedule/', views.reschedule_interview, name='reschedule_interview'),
+    
+    # CUSTOM RAW SQL ADMIN
+    path('custom-admin/', views.admin_dashboard, name='admin_dashboard'),
+    path('custom-admin/category/add/', views.admin_add_category, name='admin_add_category'),
+    path('custom-admin/category/delete/<int:category_id>/', views.admin_delete_category, name='admin_delete_category'),
+    path('custom-admin/user/delete/<int:user_id>/', views.admin_delete_user, name='admin_delete_user'),
 ]
