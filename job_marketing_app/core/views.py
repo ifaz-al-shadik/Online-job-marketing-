@@ -222,6 +222,7 @@ def job_list(request):
 
 @login_required
 def job_detail(request, job_id):
+    # 1. RAW SQL: Fetch Job + Company Info
     with connection.cursor() as cursor:
         cursor.execute("""
             SELECT 
@@ -337,20 +338,39 @@ def schedule_interview(request, application_id):
     if request.user.client_profile != application.job.client:
         return redirect('home')
 
+    # 1. Check if interview already exists (to prevent Duplicates/Crashes)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, date_time, link_or_location FROM core_interview WHERE application_id = %s", [application_id])
+        existing_interview = cursor.fetchone() # returns tuple (id, date, link) or None
+
     if request.method == 'POST':
         form = InterviewForm(request.POST)
         if form.is_valid():
             d = form.cleaned_data
             
             with connection.cursor() as cursor:
-                cursor.execute("""
-                    INSERT INTO core_interview (date_time, link_or_location, application_id)
-                    VALUES (%s, %s, %s)
-                """, [d['date_time'], d['meeting_link'], application_id])
+                if existing_interview:
+                    # UPDATE existing interview (Fixes IntegrityError)
+                    cursor.execute("""
+                        UPDATE core_interview 
+                        SET date_time = %s, link_or_location = %s 
+                        WHERE application_id = %s
+                    """, [d['date_time'], d['meeting_link'], application_id])
+                else:
+                    # INSERT new interview
+                    cursor.execute("""
+                        INSERT INTO core_interview (date_time, link_or_location, application_id)
+                        VALUES (%s, %s, %s)
+                    """, [d['date_time'], d['meeting_link'], application_id])
                 
             return redirect('view_applications', job_id=application.job.id)
     else:
-        form = InterviewForm()
+        # Pre-fill form if rescheduling
+        if existing_interview:
+            initial_data = {'date_time': existing_interview[1], 'meeting_link': existing_interview[2]}
+            form = InterviewForm(initial=initial_data)
+        else:
+            form = InterviewForm()
 
     return render(request, 'dashboard/schedule_interview.html', {
         'form': form, 
@@ -427,7 +447,6 @@ def update_profile(request):
 
     return render(request, 'update_profile.html', {'form': form})
 
-# --- NEW VIEW FOR FREELANCER PUBLIC PROFILE ---
 @login_required
 def freelancer_public_profile(request, freelancer_id):
     if not request.user.is_client:
